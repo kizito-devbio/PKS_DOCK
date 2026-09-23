@@ -34,7 +34,6 @@ from pathlib import Path
 
 from .reproducibility import render_workflow_report, write_pipeline_metadata
 
-
 PIPELINE_SCRIPT = "run_pipeline_container.sh"
 
 
@@ -65,10 +64,7 @@ def main(argv: list[str] | None = None) -> int:
 
     parser = argparse.ArgumentParser(
         prog="pks-dock",
-        description=(
-            "Fully automated PKS-I mining, compound retrieval, "
-            "and molecular docking pipeline."
-        ),
+        description=("Fully automated PKS-I mining, compound retrieval, " "and molecular docking pipeline."),
     )
 
     parser.add_argument(
@@ -84,10 +80,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--pathogens",
         nargs="+",
-        help=(
-            "Pathogen keys from config/pathogen_targets.yaml, "
-            "e.g. Staphylococcus_aureus"
-        ),
+        help=("Pathogen keys from config/pathogen_targets.yaml, " "e.g. Staphylococcus_aureus"),
     )
 
     parser.add_argument(
@@ -207,6 +200,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
-
-
