@@ -1,0 +1,105 @@
+# =============================================================================
+# PATHOGEN TARGET PANEL CONFIGURATION
+# =============================================================================
+# HONESTY NOTE (read this before you extend the panel):
+# There is no reliable, general API that returns "the validated druggable
+# targets for organism X" — target selection in every published docking study
+# is a human, literature-justified decision, not something a script can mine
+# automatically. This file is intentionally the one part of the pipeline that
+# is config-driven rather than "fully automatic" — that is the honest, correct
+# design choice, not a shortcut. To add a new pathogen, add a new block below
+# and cite the paper(s) that validated each target.
+#
+# For each target you may list MULTIPLE candidate PDB IDs. The pipeline will
+# query the RCSB Data API for each candidate's resolution/completeness and
+# automatically pick the best one — that part IS automated (script:
+# scripts/06_get_receptors.py), so you are not hardcoding a single PDB ID
+# blindly the way the earlier draft did.
+# =============================================================================
+
+pathogens:
+
+  Staphylococcus_aureus:
+    organism: "Staphylococcus aureus"
+    organism_tag: "Saureus"
+    targets:
+      - name: SrtA
+        description: "Sortase A - anchors surface adhesion proteins to peptidoglycan; virulence factor"
+        candidate_pdb_ids: ["1IJA", "2KID", "1T2P"]
+        reference: "Ton-That et al. 2002, PNAS; Zong et al. 2004, JBC"
+
+      - name: GyrA
+        description: "DNA gyrase subunit A - DNA supercoiling; classic antibiotic target"
+        candidate_pdb_ids: ["2XCT"]
+        reference: "Laponogov et al. 2010, Nat Struct Mol Biol"
+
+      - name: DHFR
+        description: "Dihydrofolate reductase - folate synthesis; trimethoprim-class target"
+        candidate_pdb_ids: ["2W9G", "3FRD"]
+        reference: "Heaslet et al. 2009, J Struct Biol"
+
+      - name: MurA
+        description: "MurA - first committed step of peptidoglycan biosynthesis"
+        candidate_pdb_ids: ["1UAE"]
+        reference: "Eschenburg et al. 2003, JBC"
+
+  Bacillus_cereus:
+    organism: "Bacillus cereus"
+    organism_tag: "Bcereus"
+    targets:
+      - name: NheA
+        description: "Non-haemolytic enterotoxin component A - pore-forming diarrhoeal toxin"
+        candidate_pdb_ids: []
+        predict_if_empty: true
+        fasta_path: "config/sequences/NheA_Bcereus.fasta"
+        reference: "Ganash et al. 2013, PLoS ONE (structural model basis)"
+
+      - name: GyrA
+        description: "DNA gyrase subunit A - essential, druggable gene"
+        candidate_pdb_ids: []
+        predict_if_empty: true
+        fasta_path: "config/sequences/GyrA_Bcereus.fasta"
+        reference: "Homology-modelled from B. subtilis template (no B. cereus crystal structure)"
+
+      - name: MurA
+        description: "MurA - peptidoglycan biosynthesis"
+        candidate_pdb_ids: []
+        predict_if_empty: true
+        fasta_path: "config/sequences/MurA_Bcereus.fasta"
+        reference: "Homology-modelled (no B. cereus crystal structure)"
+
+  Pseudomonas_aeruginosa:
+    organism: "Pseudomonas aeruginosa"
+    organism_tag: "Paeruginosa"
+    targets:
+      - name: LasB
+        description: "LasB elastase - zinc metalloprotease virulence factor"
+        candidate_pdb_ids: ["1EZM", "3DBK"]
+        reference: "Thayer et al. 1991, PNAS"
+
+      - name: PqsR
+        description: "PqsR / MvfR - quorum-sensing transcriptional regulator"
+        candidate_pdb_ids: ["4JVC", "4JVD"]
+        reference: "Ilangovan et al. 2013, PLoS Pathog"
+
+      - name: LasR
+        description: "LasR - master quorum-sensing regulator"
+        candidate_pdb_ids: ["2UV0"]
+        reference: "Bottomley et al. 2007, JBC"
+
+      - name: GyrA
+        description: "DNA gyrase subunit A - DNA supercoiling"
+        candidate_pdb_ids: ["4KPE"]
+        reference: "Cheng et al. 2013 (or closest homolog available at run time)"
+
+# =============================================================================
+# Docking / fpocket parameters
+# =============================================================================
+
+docking_parameters:
+  vina_exhaustiveness: 16
+  vina_num_modes: 9
+  vina_cpu: 8
+  fpocket_min_druggability_score: 0.0
+  grid_padding_angstrom: 8
+  

@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pks-dock"
+version = "0.2.0"
+description = "Automated PKS-I biosynthetic gene cluster mining, compound retrieval, pocket-aware molecular docking, and publication-ready reporting."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Kizito Sylvester-Ali", email = "kizitlabs.research@gmail.com" },
+]
+keywords = [
+    "bioinformatics", "molecular-docking", "antismash", "AutoDock-Vina",
+    "AlphaFold", "PKS", "antimicrobial-resistance", "structural-biology",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+dependencies = [
+    "requests>=2.31",
+    "biopython>=1.81",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-mock>=3.12",
+    "ruff>=0.5",
+    "black>=24.0",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+pks-dock = "pks_dock.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/kizitlabs/pks-dock"
+Issues = "https://github.com/kizitlabs/pks-dock/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.black]
+line-length = 110
+target-version = ["py310"]
+
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true

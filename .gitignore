@@ -1,0 +1,45 @@
+# Pipeline runtime outputs
+results/
+logs/
+cache/
+work/
+
+# Large/generated structure and docking files
+*.pdbqt
+*.pdb
+*.sdf
+*.mol2
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Testing / type checking / linting
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local environments
+.venv/
+venv/
+env/
+
+# IDE / editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Local secrets/configuration
+.env
+.env.*
+!.env.example

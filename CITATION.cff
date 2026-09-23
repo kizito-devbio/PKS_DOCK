@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use PKS_DOCK in your research, please cite it as below."
+title: "PKS_DOCK: Automated PKS-I Biosynthetic Gene Cluster Mining and Molecular Docking Pipeline"
+version: 0.2.0
+date-released: "2026-07-10"
+authors:
+  - family-names: "Sylvester-Ali"
+    given-names: "Kizito"
+    affiliation: "Redeemer's University, Department of Microbiology"
+repository-code: "https://github.com/kizitlabs/pks-dock"
+license: MIT
+keywords:
+  - bioinformatics
+  - molecular docking
+  - AutoDock Vina
+  - antiSMASH
+  - AlphaFold
+  - antimicrobial resistance
+  - biosynthetic gene clusters

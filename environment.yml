@@ -1,0 +1,40 @@
+name: pksdock
+
+channels:
+  - conda-forge
+  - bioconda
+  - nodefaults
+
+dependencies:
+  - python=3.11
+  - pip
+
+  # Genome mining and sequence analysis
+  - antismash=8.0.4
+  - biopython=1.81
+  - blast=2.17.0
+  - diamond=2.2.3
+  - entrez-direct=24.0
+  - fasttree=2.2.0
+  - hmmer=3.4
+  - prodigal=2.6.3
+
+  # Structure preparation and molecular docking
+  - rdkit=2024.09.6
+  - openbabel=3.1.1
+  - fpocket=4.2.2
+  - vina=1.2.7
+  - plip=3.0.0
+  - prody=2.6.1
+
+  # Scientific and reporting tools
+  - matplotlib=3.10.1
+  - seaborn=0.13.2
+  - openpyxl=3.1.5
+  - pyyaml=6.0.3
+  - requests=2.34.2
+  - pytest=9.1.1
+
+  # Pip-installed components from the validated environment
+  - pip:
+      - -r requirements-pip.lock
