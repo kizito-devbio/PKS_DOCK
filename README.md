@@ -2,19 +2,19 @@
 
 # PKS_DOCK
 
-### An Open-Source Pipeline for Genome-Guided Natural-Product Discovery, Pocket-Aware Molecular Docking, Interaction Profiling, and ADMET Prediction
+### An Open-Source, Reference-Genome-Based Pipeline for Genome-Guided Natural-Product Discovery, Pocket-Aware Docking, and ADMET Screening
 
-**From biosynthetic gene cluster to ranked, interaction-profiled, ADMET-filtered natural-product candidates — with full decision logging and reproducibility.**
+**Fully automated, evidence-documented *in silico* workflow from unsequenced bacterial isolate to confidence-graded candidate inhibitor.**
 
-🔗 **Repository:** [github.com/kizito-devbio/PKS_DOCK](https://github.com/kizito-devbio/PKS_DOCK)  
-🐳 **Docker:** [hub.docker.com/r/kizitodevbio/pks-dock](https://hub.docker.com/r/kizitodevbio/pks-dock)
+🔗 **Repository:** [github.com/kizito-devbio/PKS_DOCK](https://github.com/kizito-devbio/PKS_DOCK)
+🐳 **Docker image:** [hub.docker.com/r/kizitodevbio/pks-dock](https://hub.docker.com/r/kizitodevbio/pks-dock)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
-[![Version](https://img.shields.io/badge/version-0.2.0-blue.svg)](https://github.com/kizito-devbio/PKS_DOCK)
-[![Docker](https://img.shields.io/badge/docker-kizitodevbio%2Fpks--dock-blue.svg)](https://hub.docker.com/r/kizitodevbio/pks-dock)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
+[![PyPI version](https://img.shields.io/badge/version-0.2.0-informational.svg)](pyproject.toml)
 [![Status](https://img.shields.io/badge/status-active-success.svg)](https://github.com/kizito-devbio/PKS_DOCK)
-[![GitHub Stars](https://img.shields.io/github/stars/kizito-devbio/PKS_DOCK?style=social)](https://github.com/kizito-devbio/PKS_DOCK/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/kizito-devbio/PKS_DOCK)](https://github.com/kizito-devbio/PKS_DOCK/commits/main)
+[![Docker Pulls](https://img.shields.io/docker/pulls/kizitodevbio/pks-dock)](https://hub.docker.com/r/kizitodevbio/pks-dock)
 
 </div>
 
@@ -22,417 +22,502 @@
 
 ## Table of Contents
 
-- [Quick Start](#quick-start)
-- [Key Features](#key-features)
-- [Why PKS_DOCK](#why-pks_dock)
-- [What Makes This a Pipeline, Not a Script Collection](#what-makes-this-a-pipeline-not-a-script-collection)
+- [Overview](#overview)
+- [What Makes This a Platform, Not a Docking Script](#what-makes-this-a-platform-not-a-docking-script)
 - [Architecture](#architecture)
-- [Pipeline Phases](#pipeline-phases)
-- [Example Use Case](#example-use-case)
+- [Honesty Log — What Changed From the Earlier Draft](#honesty-log--what-changed-from-the-earlier-draft)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Running with Docker](#running-with-docker)
 - [Usage](#usage)
-- [Configuration](#configuration)
+- [Pipeline Stages Reference](#pipeline-stages-reference)
+- [AlphaFold Integration](#alphafold-integration)
+- [Adding a New Pathogen or Target](#adding-a-new-pathogen-or-target)
+- [Directory Structure](#directory-structure)
 - [Outputs](#outputs)
 - [Reproducibility & Provenance](#reproducibility--provenance)
-- [Testing](#testing)
-- [Known Limitations](#known-limitations)
-- [Roadmap](#roadmap)
+- [Honest Limitations](#honest-limitations-please-read-before-you-present-this-to-your-supervisor)
+- [Development & Testing](#development--testing)
 - [Frequently Asked Questions](#frequently-asked-questions)
+- [Roadmap](#roadmap)
 - [Contributing](#contributing)
 - [Acknowledgments](#acknowledgments)
 - [License](#license)
-- [Citation](#citation)
 - [Contact](#contact)
 
 ---
 
-## Quick Start
+## Overview
 
-```bash
-# Option A — Docker (recommended for full reproducibility)
-docker pull kizitodevbio/pks-dock:0.2.0
-git clone https://github.com/kizito-devbio/PKS_DOCK.git
-cd PKS_DOCK
-./run_pipeline.sh --organism "Bacillus velezensis" \
-  --pathogens Staphylococcus_aureus Bacillus_cereus Pseudomonas_aeruginosa \
-  --threads 8
+PKS_DOCK connects **genome mining** with **structure-based computational drug discovery**.
 
-# Option B — Local install
-git clone https://github.com/kizito-devbio/PKS_DOCK.git
-cd PKS_DOCK
-conda env create -f environment.yml
-conda activate pksdock
-pks-dock --organism "Bacillus velezensis" \
-  --pathogens Staphylococcus_aureus Bacillus_cereus Pseudomonas_aeruginosa \
-  --threads 8
-```
+The pipeline starts from a PKS-producing bacterial organism or genome accession, identifies Type-I PKS biosynthetic gene clusters using antiSMASH, resolves associated natural-product compounds through public chemical databases, prepares the resulting ligands for docking, and evaluates them against a configurable set of pathogen protein targets.
+
+Where experimental pathogen structures are available, PKS_DOCK evaluates candidate structures from the RCSB Protein Data Bank and selects a structure using explicit quality criteria. Where a target lacks a usable experimental structure, the workflow can recover or retrieve its sequence, check AlphaFold DB for a validated prediction, and fall back to local ColabFold prediction when necessary.
+
+The resulting structures are prepared, analyzed with `fpocket` for pocket detection, docked with AutoDock Vina, profiled with PLIP, evaluated with ADMET-AI, and converted into tables, figures, an automatically generated interpretation report, and a manuscript/supplementary package.
+
+The pipeline is designed around one principle:
+
+> **Automate the repetitive computational work while making important scientific decisions explicit, inspectable, and reproducible.**
+
+It was built for, and is currently used in, exactly this situation: antimicrobial-producing bacterial isolates from Nigerian fermented foods and natural spring water, where sequencing every promising isolate simply isn't feasible before you need a first-pass computational answer.
 
 ---
 
-## Key Features
+## What Makes This a Platform, Not a Docking Script
 
-- 🧬 **Genome-guided natural-product mining** — antiSMASH-based Type-I PKS / NRPS cluster detection from reference or user-supplied genomes
-- 📦 **Automated compound retrieval** — PubChem → ChEBI → NCI CIR fallback chain with documented provenance
-- 🎯 **Pocket-aware docking** — fpocket-derived grid boxes (not ligand-centred assumptions)
-- 🧪 **Full interaction profiling** — all 8 PLIP interaction types (H-bonds, hydrophobic, salt bridges, water bridges, π-stacking, π-cation, halogen, metal)
-- 💊 **ADMET filtering** — Lipinski and related property assessment of docked candidates
-- 📊 **Publication-ready outputs** — figures (300 DPI), tables, prose interpretation report, manuscript package
-- 📜 **Decision logging** — every automated choice written to `decision_log.json` and `workflow_report.md`
-- 🐳 **Docker + Conda** — containerised end-to-end run or local installable CLI (`pks-dock`)
-- 🔁 **Crash-safe provenance** — reproducibility artefacts finalised even if a phase fails mid-run
+Most reference-genome docking workflows are a straight line: pick a genome, run antiSMASH, dock whatever comes out. PKS_DOCK instead makes an explicit, logged decision at each stage about what evidence is actually available, rather than assuming a fixed happy path:
 
----
-
-## Why PKS_DOCK
-
-Natural-product discovery from antimicrobial-producing bacteria often stalls when isolate genomes are unavailable or incomplete. Researchers then face a fragmented workflow: genome mining in one tool, compound lookup in another, docking in a third, interaction analysis in a fourth — with dozens of undocumented decisions along the way.
-
-**PKS_DOCK** was built for that gap. It takes a producer organism (or NCBI accession) and a configurable panel of pathogen targets, then runs a complete chain:
-
-1. Resolve a reference genome  
-2. Mine Type-I PKS / NRPS biosynthetic gene clusters  
-3. Retrieve predicted natural-product structures  
-4. Prepare receptors (PDB or AlphaFold DB / ColabFold)  
-5. Detect druggable pockets with fpocket  
-6. Dock, profile interactions, and filter by ADMET  
-7. Emit figures, tables, interpretation text, and full decision logs  
-
-Every step records *what* was chosen and *why*, so results remain auditable for thesis defence, peer review, or reuse in low-resource settings.
-
----
-
-## What Makes This a Pipeline, Not a Script Collection
-
-| Decision point | Manual approach | What PKS_DOCK automates |
+| Decision point | Naive approach | What PKS_DOCK does |
 | --- | --- | --- |
-| Reference genome | Search NCBI by hand | NCBI Assembly search; best reference/representative selected and logged |
-| Ligand structure | PubChem / ChEBI / papers by hand | Cascading retrieval: PubChem PUG-REST → ChEBI → NCI CIR |
-| Receptor structure | Download PDB or run ColabFold yourself | PDB preferred; AlphaFold DB checked before local ColabFold |
-| Docking box | Centre on co-crystallised ligand (often already removed) | **fpocket** pocket detection → grid from top-ranked pocket coordinates |
-| Interaction types | Often only H-bonds / hydrophobic | All 8 PLIP types parsed and reported |
-| Provenance | Terminal notes, if any | `decision_log.json`, `workflow_report.md`, `pipeline_metadata.json` |
-| Failure recovery | Restart from scratch | Incremental decision log survives partial runs |
+| Reference genome selection | Pick the first hit on NCBI | Resolves the organism name via NCBI Assembly search and picks the best available reference/representative assembly automatically (Phase 1) |
+| Compound identity | Assume every antiSMASH cluster is a known compound | Only clusters with a literature-supported match are treated as named compounds; unannotated clusters are never silently promoted to named ligands |
+| Ligand structure retrieval | One API call, hope it works | PubChem PUG-REST first, ChEBI's real structure-download endpoint and NCI CIR as genuine fallbacks, all through one retrying HTTP client |
+| Docking target definition | Center the box by eye, or on a stripped ligand | `fpocket` pocket detection ranks druggability and derives the grid box from the real top-pocket coordinates (Phase 8/8b) |
+| Receptor structure | Always predict from scratch | Checks AlphaFold DB for an existing prediction by UniProt accession first; only falls back to local ColabFold if nothing exists (Phase 6b) |
+| Interaction reporting | A handful of hydrogen bonds | All 8 PLIP interaction types: hydrogen bonds, hydrophobic contacts, salt bridges, water bridges, π-stacking, π-cation interactions, halogen bonds, metal complexes |
+| Result trust | Terminal output, gone after the run | `decision_log.json`, `workflow_report.md`, and `pipeline_metadata.json` written automatically, even on partial failure |
 
 ---
 
 ## Architecture
 
-The diagram below is the real control flow. Every box corresponds to an implemented phase or decision in `run_pipeline_container.sh` and the `scripts/` directory.
+The diagram below is the real control flow implemented across `scripts/01_fetch_genome.py` through `scripts/16_generate_reproducibility_report.py`, orchestrated by `run_pipeline_container.sh` and exposed as the `pks-dock` CLI.
 
 ```mermaid
 flowchart TD
-    A["Input: organism name or NCBI accession<br/>+ pathogen target panel"] --> B["Phase 1: Fetch reference genome<br/>NCBI Assembly"]
-    B --> C["Phase 2–3: antiSMASH<br/>Type-I PKS / NRPS cluster mining"]
-    C --> D["Phase 4–5: Ligand retrieval & preparation<br/>PubChem → ChEBI → NCI CIR"]
-    D --> E{"Experimental PDB available?"}
-    E -->|Yes| F["Phase 6: Download receptor"]
-    E -->|No| G{"AlphaFold DB hit?"}
-    G -->|Yes| H["Download AFDB structure"]
-    G -->|No| I["Phase 6b: Local ColabFold prediction"]
-    F --> J["Phase 7: Receptor preparation<br/>PDBQT"]
-    H --> J
-    I --> J
-    J --> K["Phase 8–8b: fpocket<br/>pocket ranking + grid configs"]
-    K --> L["Phase 9: AutoDock Vina docking"]
-    L --> M["Phase 10–11: PLIP interaction profiling<br/>all 8 interaction types"]
-    M --> N["Phase 12: ADMET prediction"]
-    N --> O["Phase 13–15: Figures, tables,<br/>interpretation, manuscript package"]
-    O --> P["Phase 16: Reproducibility report<br/>decision_log + workflow_report + metadata"]
-    P --> Q["Output: ranked, interaction-profiled,<br/>ADMET-filtered natural-product candidates"]
+
+    A["PKS-producing organism<br/>or NCBI accession"]
+
+    A --> B["Phase 1<br/>Reference genome acquisition"]
+
+    B --> C["Phase 2<br/>antiSMASH PKS-I mining"]
+
+    C --> D["Phase 3<br/>Parse antiSMASH output<br/>and identify candidate compounds"]
+
+    D --> E["Phase 4<br/>Compound / ligand retrieval"]
+
+    E --> E1["PubChem"]
+    E --> E2["ChEMBL"]
+    E --> E3["NCI-CIR"]
+    E --> E4["ChEBI"]
+
+    E1 --> F["Resolved compound set"]
+    E2 --> F
+    E3 --> F
+    E4 --> F
+
+    F --> G["Phase 5<br/>Ligand preparation"]
+
+    G --> H["Pathogen target panel<br/>config/pathogen_targets.yaml"]
+
+    H --> I["Phase 6<br/>Retrieve experimental receptors"]
+
+    I --> J{"Experimental structure<br/>available?"}
+
+    J -->|Yes| K["RCSB Data API<br/>quality evaluation"]
+
+    K --> L["Select candidate structure"]
+
+    J -->|No| M["Phase 6b<br/>Recover / retrieve sequence"]
+
+    M --> N{"Valid AlphaFold DB<br/>prediction available?"}
+
+    N -->|Yes| O["Validate structure<br/>and mean pLDDT"]
+
+    O --> P{"Pass confidence<br/>threshold?"}
+
+    P -->|Yes| Q["Use AlphaFold DB structure"]
+    P -->|No| R["Try alternate accession"]
+
+    R --> N
+
+    N -->|No valid prediction| S["Local ColabFold"]
+
+    L --> T["Phase 7<br/>Receptor preparation"]
+    Q --> T
+    S --> T
+
+    T --> U["Phase 8<br/>fpocket pocket detection"]
+
+    U --> V["Rank detected pockets"]
+
+    V --> W["Pocket coordinates"]
+
+    W --> X["Generate docking-grid configuration"]
+
+    X --> Y["Phase 9<br/>AutoDock Vina"]
+
+    G --> Y
+
+    Y --> Z["Validated docking output<br/>+ binding affinity"]
+
+    Z --> AA["Phase 10<br/>PLIP interaction profiling"]
+
+    AA --> AB["Phase 11<br/>Parse interaction reports"]
+
+    AB --> AC["Phase 12<br/>ADMET-AI"]
+
+    Z --> AD["Phase 13<br/>Figures + tables"]
+    AB --> AD
+    AC --> AD
+    X --> AD
+
+    AD --> AE["Phase 14<br/>Automated interpretation"]
+
+    AD --> AF["Phase 15<br/>Manuscript / supplementary package"]
+
+    Z --> AG["Phase 16<br/>Reproducibility finalization"]
+    AB --> AG
+    AC --> AG
+    AE --> AG
+
+    AG --> AH["decision_log.json"]
+    AG --> AI["workflow_report.md"]
+    AG --> AJ["pipeline_metadata.json"]
+
+    style A fill:#e8f4f8
+    style H fill:#fff3cd
+    style J fill:#f8d7da
+    style N fill:#f8d7da
+    style P fill:#f8d7da
+    style AD fill:#e8f5e9
+    style AE fill:#e8f5e9
+    style AF fill:#e8f5e9
+    style AG fill:#e8f5e9
 ```
 
-> **Note:** GitHub renders Mermaid diagrams natively. If your viewer does not, the same flow is described in the [Pipeline Phases](#pipeline-phases) table below.
+> GitHub renders Mermaid diagrams natively in Markdown, so this displays with no extra setup. Every box maps to a real script in `scripts/`, not an illustrative simplification — the branches shown (experimental vs. predicted structure, AlphaFold DB hit vs. miss, confidence threshold) are actual decision points in the pipeline, each one logged to `decision_log.json` as it happens.
 
 ---
 
-## Pipeline Phases
+## Honesty Log — What Changed From the Earlier Draft
 
-| Phase | Script | Function |
-| --- | --- | --- |
-| 0 | `00_clean_workspace.sh` | Optional workspace reset |
-| 1 | `01_fetch_genome.py` | Resolve and download reference genome (NCBI Assembly) |
-| 2 | `02_run_antismash.sh` | antiSMASH biosynthetic gene-cluster detection |
-| 3 | `03_parse_antismash.py` | Parse clusters; extract predicted compound names |
-| 4 | `04_get_ligands.py` | Retrieve ligand structures (PubChem → ChEBI → NCI CIR) |
-| 5 | `05_prep_ligands.sh` | Ligand preparation → PDBQT |
-| 6 | `06_get_receptors.py` | Fetch experimental PDB structures where available |
-| 6b | `06b_predict_receptors.py` | AlphaFold DB check → ColabFold fallback; UniProt sequence fetch |
-| 7 | `07_prep_receptors.sh` | Receptor cleaning and PDBQT conversion |
-| 8 | `08_run_fpocket.sh` | Pocket detection and ranking |
-| 8b | `08b_generate_grid_configs.py` | Derive Vina grid centre/size from top pockets |
-| 9 | `09_run_docking.sh` | AutoDock Vina docking |
-| 10 | `10_run_plip.py` | PLIP interaction analysis |
-| 11 | `11_parse_plip.py` | Parse all 8 interaction types into structured tables |
-| 12 | `12_run_admet.py` | ADMET / Lipinski-style filtering |
-| 13 | `13_generate_figures.py` | Publication-ready figures (300 DPI) |
-| 14 | `14_generate_interpretation.py` | Prose Markdown interpretation from real result numbers |
-| 15 | `15_generate_manuscript_package.py` | Manuscript / supplementary export package |
-| 16 | `16_generate_reproducibility_report.py` | Final decision log, workflow report, metadata |
+This version was rebuilt specifically to fix bugs and undisclosed shortcuts identified in a prior internal review, before this pipeline was ever presented as finished. If you're comparing against an older draft, here is exactly what changed and why:
 
----
-
-## Example Use Case
-
-PKS_DOCK was developed in the context of antimicrobial discovery from Nigerian fermented foods and natural spring water, where isolate whole-genome sequencing was unavailable. Using *Bacillus velezensis* FZB42 as a reference genome, the pipeline:
-
-1. Mines Type-I PKS clusters (e.g. fengycin, bacillaene, difficidin, macrolactin H)  
-2. Retrieves compound structures  
-3. Docks against pathogen targets (e.g. *B. cereus* MurA)  
-4. Profiles interactions and applies ADMET filters  
-
-Results such as predicted binding affinities and Lipinski compliance are treated as **hypotheses requiring experimental validation**, not as confirmed activity.
+| Issue in the old draft | Fix in this version |
+| --- | --- |
+| Vina score parsing grabbed the wrong log line, returning the literal string `"(kcal/mol)"` instead of a number | Parser corrected and covered by `tests/test_vina_parsing.sh` |
+| Grid box centered on a co-crystallized ligand that had already been stripped from the structure | Replaced entirely with `fpocket`-derived pocket detection (Phase 8/8b) |
+| `fpocket` was completely absent from the workflow | Added as Phase 8/8b, ranking pockets by druggability and deriving the grid from real coordinates |
+| ChEBI fallback wrote a raw API search response as if it were a structure file | Replaced with ChEBI's real structure-download endpoint, NCI CIR as a genuine second fallback, and direct PubChem PUG-REST HTTP calls as the primary source |
+| `pcp.get_sdf()` — an unverified PubChemPy function | Replaced with documented, stable PubChem PUG-REST HTTP calls |
+| A required sequence file was never actually generated by the pipeline (an undisclosed manual step) | Phase 6b now auto-fetches the sequence from UniProt, falling back to a manual file only if that genuinely fails — and says so out loud |
+| A hardcoded receptor panel was presented as "works on any genome" | Still deliberately config-driven (`config/pathogen_targets.yaml`) — see [Honest Limitations](#honest-limitations-please-read-before-you-present-this-to-your-supervisor) for why that's the honest choice, not a shortcut |
+| PLIP parser only captured 3 of 8 interaction types | Now captures all 8 |
+| No `environment.yml` | Added, with a note on freezing an exact lock file from a tested install before publishing |
+| "Interpretation" was just terminal print statements | Phase 14 now generates an actual prose Markdown report from the real result numbers |
+| Every phase rolled its own retry logic, inconsistently | Replaced with one shared, unit-tested `pks_dock.net.HTTPClient` (retry, exponential backoff, disk cache, `fallback_chain()`) |
+| Phase 6b always ran a fresh local ColabFold job, even when AlphaFold DB already had a solved structure | Now checks AlphaFold DB by UniProt accession first, and only predicts locally if nothing exists |
+| No reproducibility artifacts — automated decisions only ever existed as terminal output | `decision_log.json`, `workflow_report.md`, and `pipeline_metadata.json` now written automatically, incrementally, and survive a crash partway through |
+| Not a real installable package | Now ships as `pks-dock`, an installable package (`pip install -e .`) with a real CLI entry point |
+| No LICENSE, CITATION.cff, CONTRIBUTING.md, CHANGELOG.md, or CI | All added, alongside 20 offline unit tests run in CI on every push |
 
 ---
 
 ## Requirements
 
 **Hardware**
-- 8+ CPU cores recommended (Vina and antiSMASH benefit from parallelism)
-- 16 GB RAM minimum; 32 GB+ recommended for ColabFold / large receptors
-- Disk space for genomes, antiSMASH databases, and docking outputs
+- 8+ CPU cores recommended (AutoDock Vina parallelizes automatically)
+- 8 GB RAM minimum; 16 GB+ recommended for larger receptors
+- Developed and tested on a Dell Precision 5530 (12-core, 32 GB RAM) running WSL2/Ubuntu
 
 **Software**
-- Docker 24+ (recommended path), **or**
-- Miniconda / Anaconda + the tools listed in `environment.yml` (antiSMASH, AutoDock Vina, fpocket, PLIP, Open Babel, etc.)
+- Python 3.10, 3.11, or 3.12
+- [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or Anaconda (recommended route — see below)
+- Docker Engine 24+ (optional, only if running via container)
 - Git
 
 ---
 
 ## Installation
 
-### Local (Conda)
+**1. Clone the repository**
 
 ```bash
 git clone https://github.com/kizito-devbio/PKS_DOCK.git
 cd PKS_DOCK
+```
+
+**2. Create and activate the Conda environment**
+
+```bash
 conda env create -f environment.yml
 conda activate pksdock
 ```
 
-This installs the `pks-dock` package (`pip install -e .`) and exposes the `pks-dock` CLI.
+This resolves the full scientific stack — antiSMASH, AutoDock Vina, Open Babel, fpocket, PLIP, ProDy, RDKit, Meeko, OpenMM, PDBFixer, ADMET-AI, and Biopython — and also installs the `pks-dock` package itself (`pip install -e .`, declared in `environment.yml`), giving you the `pks-dock` CLI described below.
 
-Without conda:
+If you're not using Conda, `pip install -e ".[dev]"` from the repo root installs the Python package and development tooling on their own — but the heavier scientific tools (antiSMASH, Vina, fpocket, PLIP) still need to be available on your system separately in that case.
 
-```bash
-pip install -e ".[dev]"
-```
-
-Before publication, regenerate a lock file from your tested install (see the note in `environment.yml`).
-
-### Development tooling
+**3. Verify the environment**
 
 ```bash
-pip install -e ".[dev]"
-pytest tests/ -v
-ruff check src/ tests/
-black --check src/ tests/
+pks-dock --version
+python -c "import prody, meeko, pdbfixer; print('OK')"
 ```
+
+Before relying on this for a thesis chapter or publication, regenerate a real lock file from your own tested install rather than trusting `environment.yml`'s resolved versions blindly — package resolvers can substitute versions (for example, pip resolving a newer RDKit than the one Conda requested) even when the top-level spec looks pinned.
 
 ---
 
 ## Running with Docker
 
-The published image bundles the full tool stack:
+The published image bundles the entire scientific stack, including the antiSMASH reference databases, so there's nothing to download or configure beyond pulling the image.
+
+### Option A — Pull the published image (fastest, recommended)
+
+No clone, no build, no dependency resolution — just pull and run:
 
 ```bash
 docker pull kizitodevbio/pks-dock:0.2.0
 ```
 
-From a clone of this repository:
+Then run the pipeline directly against the pulled image, mounting local `data/`, `results/`, and `logs/` directories so output persists on your host machine rather than disappearing with the container:
 
 ```bash
-./run_pipeline.sh --organism "Bacillus velezensis" \
-  --pathogens Staphylococcus_aureus Bacillus_cereus Pseudomonas_aeruginosa \
-  --threads 8
+mkdir -p results logs
+
+docker run --rm \
+    -v "$(pwd)/results:/opt/PKS_DOCK/results" \
+    -v "$(pwd)/logs:/opt/PKS_DOCK/logs" \
+    kizitodevbio/pks-dock:0.2.0 \
+    --organism "Bacillus velezensis" \
+    --pathogens Staphylococcus_aureus Bacillus_cereus Pseudomonas_aeruginosa \
+    --threads 8
 ```
 
-`run_pipeline.sh` mounts the project directory into the container so that `results/` and `logs/` are written on the host. Override the image tag if needed:
+If you've cloned the repository as well, the same pulled image can be driven through the launcher instead, which mounts the whole repo automatically so you don't have to specify volumes by hand:
 
 ```bash
-export PKS_DOCK_IMAGE=kizitodevbio/pks-dock:0.2.0
-./run_pipeline.sh --accession GCF_000063585.1 --pathogens Staphylococcus_aureus
+PKS_DOCK_IMAGE=kizitodevbio/pks-dock:0.2.0 ./run_pipeline.sh \
+    --organism "Bacillus velezensis" \
+    --pathogens Staphylococcus_aureus
 ```
+
+### Option B — Build the image yourself
+
+```bash
+git clone https://github.com/kizito-devbio/PKS_DOCK.git
+cd PKS_DOCK
+docker build -t pks-dock:0.2.0 .
+
+./run_pipeline.sh \
+    --organism "Bacillus velezensis" \
+    --pathogens Staphylococcus_aureus Bacillus_cereus Pseudomonas_aeruginosa \
+    --threads 8
+```
+
+`run_pipeline.sh` is a thin Docker launcher only — it locates the repository, ensures `results/` and `logs/` exist on the host, and passes your arguments straight into the container. The actual 16-phase scientific workflow lives in `run_pipeline_container.sh`, which does not itself call Docker and can also be run directly inside a correctly configured Conda environment (see [Installation](#installation)) if you'd rather not use Docker at all.
 
 ---
 
 ## Usage
 
-### CLI (`pks-dock`)
+Two equivalent ways to run the pipeline:
 
 ```bash
+# 1) Installed CLI (recommended) — works from anywhere once `pip install -e .`
+#    has run; finalizes results/reports/workflow_report.md and
+#    pipeline_metadata.json even if a phase fails partway through
 pks-dock --organism "Bacillus velezensis" \
-  --pathogens Staphylococcus_aureus Bacillus_cereus Pseudomonas_aeruginosa \
-  --threads 8 \
-  --exhaustiveness 16 \
-  --num-modes 9 \
-  --cpu 8
+    --pathogens Staphylococcus_aureus Bacillus_cereus Pseudomonas_aeruginosa \
+    --threads 8
+
+# 2) Docker launcher (must be run from inside the repo)
+./run_pipeline.sh \
+    --accession GCF_000063585.1 \
+    --pathogens Staphylococcus_aureus \
+    --threads 8
 ```
 
-| Argument | Default | Description |
-| --- | --- | --- |
-| `--organism` | — | Producer organism name (NCBI Assembly search) |
-| `--accession` | — | Specific NCBI genome accession (if known) |
-| `--pathogens` | **required** | One or more keys from `config/pathogen_targets.yaml` |
-| `--threads` | `4` | Threads for supported steps |
-| `--exhaustiveness` | `16` | AutoDock Vina exhaustiveness |
-| `--num-modes` | `9` | Docking poses per run |
-| `--cpu` | `8` | CPUs passed to docking |
-| `--version` | — | Print version and exit |
+Every phase prints, in real time, what it's doing, why, and what it found. A full combined log is saved to `logs/pipeline_log_<timestamp>.txt`. Every automated decision — which reference genome, which PDB structure, which fallback database resolved a compound, whether AlphaFold DB already had a receptor prediction — is additionally written to:
 
-Supply either `--organism` or `--accession`.
-
-### Direct pipeline script
-
-Inside the container (or a fully provisioned local environment):
-
-```bash
-./run_pipeline_container.sh \
-  --accession GCF_000063585.1 \
-  --pathogens Staphylococcus_aureus \
-  --threads 8
-```
-
-Every phase prints what it is doing and why. A combined log is written to `logs/pipeline_log_<timestamp>.txt`. Automated decisions are written to:
-
-- `results/reports/decision_log.json` — machine-readable, crash-safe  
-- `results/reports/workflow_report.md` — human-readable narrative  
-- `results/reports/pipeline_metadata.json` — software versions, git commit, CLI parameters  
+- **`results/reports/decision_log.json`** — machine-readable, appended to incrementally as each phase runs, so it survives a crash partway through
+- **`results/reports/workflow_report.md`** — the same decisions rendered as a human-readable, phase-by-phase narrative
+- **`results/reports/pipeline_metadata.json`** — software version, git commit, Python/platform info, and the exact CLI parameters used for the run
 
 ---
 
-## Configuration
+## Pipeline Stages Reference
 
-Pathogen target panels live in **`config/pathogen_targets.yaml`**.
+| Phase | Script | Function |
+| --- | --- | --- |
+| 1 | `01_fetch_genome.py` | Resolve organism name/accession to a reference genome via NCBI Assembly |
+| 2 | `02_run_antismash.sh` | Run antiSMASH biosynthetic gene cluster mining |
+| 3 | `03_parse_antismash.py` | Parse antiSMASH output, identify Type-I PKS clusters |
+| 4 | `04_get_ligands.py` | Resolve named compounds (PubChem → ChEBI → NCI CIR) |
+| 5 | `05_prep_ligands.sh` | Ligand preparation for docking |
+| 6 | `06_get_receptors.py` | Resolve pathogen drug targets from `config/pathogen_targets.yaml`; fetch experimental structures |
+| 6b | `06b_predict_receptors.py` | AlphaFold DB lookup by UniProt accession; local ColabFold fallback if no prediction exists |
+| 7 | `07_prep_receptors.sh` | Receptor cleaning and preparation |
+| 8 | `08_run_fpocket.sh` | Cavity/pocket detection on every prepared receptor |
+| 8b | `08b_generate_grid_configs.py` | Derive docking grid center/size from the top-ranked pocket |
+| 9 | `09_run_docking.sh` | AutoDock Vina docking |
+| 10 | `10_run_plip.sh` | PLIP protein–ligand interaction profiling |
+| 11 | `11_parse_plip.py` | Parse PLIP output — all 8 interaction types |
+| 12 | `12_run_admet.py` | ADMET-AI pharmacokinetic and drug-property screening |
+| 13 | `13_generate_figures.py` | Publication-ready figures (F1–F15, 300 DPI) |
+| 14 | `14_generate_interpretation.py` | Prose Markdown interpretation report from the real result numbers |
+| 15 | `15_generate_manuscript_package.py` | Manuscript/supplementary export |
+| 16 | `16_generate_reproducibility_report.py` | Final `decision_log.json`, `workflow_report.md`, `pipeline_metadata.json` |
 
-This file is intentionally human-curated. There is no reliable public API that returns “validated druggable targets for organism X”. Each entry should include candidate PDB IDs (the pipeline selects by resolution) or `predict_if_empty: true` for AlphaFold DB / ColabFold prediction. Always cite the literature that justifies each target.
+---
 
-To add a pathogen:
+## AlphaFold Integration
 
-1. Add a block under the appropriate key.  
-2. List `candidate_pdb_ids` or enable structure prediction.  
-3. Document the source for each target.
+Phase 6b (structure prediction for receptors with no experimental PDB) checks the [AlphaFold DB API](https://alphafold.ebi.ac.uk/api-docs) for an existing prediction for the resolved UniProt accession *before* running a new local ColabFold job. If AlphaFold DB has one, it's downloaded directly (with retries and caching via `pks_dock.net.HTTPClient`) and ColabFold is skipped entirely; if not, the pipeline says so explicitly and falls back to local prediction. Either way, the choice and the reason are written to `decision_log.json`.
+
+---
+
+## Adding a New Pathogen or Target
+
+Edit `config/pathogen_targets.yaml`. Add a block with `candidate_pdb_ids` (the pipeline auto-selects the best one by resolution) or set `predict_if_empty: true` if no experimental structure exists, in which case the pipeline auto-fetches the sequence from UniProt and predicts with ColabFold. Always cite the source that validated the target as druggable — this file is the one intentionally human-curated part of the pipeline (see [Honest Limitations](#honest-limitations-please-read-before-you-present-this-to-your-supervisor)).
+
+---
+
+## Directory Structure
+
+```
+PKS_DOCK/
+├── README.md
+├── pyproject.toml                    <- installable `pks-dock` package (pip install -e .)
+├── environment.yml
+├── run_pipeline.sh                   <- Docker launcher (mounts repo, persists results/logs)
+├── run_pipeline_container.sh         <- actual 16-phase scientific workflow (no Docker calls)
+├── Dockerfile
+├── LICENSE  CITATION.cff  CONTRIBUTING.md  CHANGELOG.md
+├── .github/workflows/                <- lint + offline unit tests on every push/PR
+├── src/pks_dock/                     <- installable package, shared across all phases
+│   ├── net.py                        <- retry/backoff/caching HTTPClient + fallback_chain()
+│   ├── alphafold.py                  <- real AlphaFold DB API integration
+│   ├── reproducibility.py            <- DecisionLog, workflow_report.md, pipeline_metadata.json
+│   └── cli.py                        <- `pks-dock` console-script entry point
+├── config/
+│   ├── pathogen_targets.yaml         <- target panels (human-curated, cited)
+│   └── sequences/                    <- auto-fetched or manually supplied FASTA files
+├── scripts/                          <- 01-16, see Pipeline Stages Reference above
+├── results/                          <- all generated at runtime
+│   ├── genomes/  antismash/  ligands/  ligands_pdbqt/
+│   ├── receptors_raw/  receptors_pdbqt/  fpocket/  docking/  plip/  admet/
+│   ├── figures/                      <- F1-F15, 300 DPI
+│   ├── tables/                       <- Table01-Table05
+│   └── reports/
+│       ├── interpretation.md  decision_log.json
+│       ├── workflow_report.md  pipeline_metadata.json
+│       └── manuscript_package/
+├── logs/                             <- timestamped full pipeline logs
+├── cache/http/                       <- on-disk cache for retried API calls
+├── tests/
+│   ├── test_net.py                   <- retry/backoff/cache/fallback_chain unit tests
+│   ├── test_alphafold.py             <- AlphaFold DB hit/miss/error unit tests
+│   ├── test_reproducibility.py       <- decision log + report rendering unit tests
+│   └── test_vina_parsing.sh          <- verifies the Vina log parsing fix
+└── docs/
+    └── DIRECTORY_STRUCTURE.md
+```
 
 ---
 
 ## Outputs
 
-```
-results/
-├── genomes/                 # Downloaded reference genomes
-├── antismash/               # antiSMASH cluster reports
-├── ligands/  ligands_pdbqt/ # Retrieved and prepared ligands
-├── receptors_raw/ receptors_pdbqt/
-├── fpocket/                 # Pocket detection (inspect top pockets visually)
-├── docking/                 # Vina poses and logs
-├── plip/                    # Interaction profiles
-├── admet/                   # ADMET / property tables
-├── figures/                 # F1–F15, 300 DPI
-├── tables/                  # Table01–Table05
-└── reports/
-    ├── interpretation.md
-    ├── decision_log.json
-    ├── workflow_report.md
-    ├── pipeline_metadata.json
-    └── manuscript_package/
-```
+A run produces layered, cross-referenced output rather than a single result file:
+
+- **Figures** (`results/figures/`) — 15 publication-ready, 300 DPI figures (F1–F15)
+- **Tables** (`results/tables/`) — 5 structured comparison tables (Table01–Table05)
+- **Per-stage reports** (`results/reports/`) — including `interpretation.md`, a prose Markdown summary generated from the run's real numbers, not a template
+- **Reproducibility artifacts** — `decision_log.json`, `workflow_report.md`, `pipeline_metadata.json`
 
 ---
 
 ## Reproducibility & Provenance
 
-- **Environment** — `environment.yml` for Conda; Docker image `kizitodevbio/pks-dock:0.2.0` for locked tool versions  
-- **Decision log** — every genome choice, PDB selection, ligand database fallback, AlphaFold DB hit/miss, and pocket ranking is recorded  
-- **Workflow report** — same decisions rendered as a phase-by-phase Markdown narrative  
-- **Pipeline metadata** — software versions, git commit, platform, exact CLI flags  
-- **Crash safety** — the `pks-dock` CLI finalises metadata and the workflow report even when a phase exits non-zero  
-
-To reproduce a run, use the same Docker tag (or the same Conda environment) and the same `--organism` / `--accession` / `--pathogens` / `--exhaustiveness` values recorded in `pipeline_metadata.json`.
+- **Environment** — `environment.yml` declares the full scientific stack; regenerate and pin a lock file from your own tested install before publishing results from it
+- **Decision logging** — every automated choice (reference genome, named vs. unannotated compound, experimental vs. predicted structure, which pocket, which fallback database) is written to `decision_log.json` as it happens, not reconstructed after the fact
+- **Human-readable narrative** — `workflow_report.md` renders the same decisions as a phase-by-phase story, suitable for a methods section or a supervisor review
+- **Run provenance** — `pipeline_metadata.json` records software version, git commit, Python/platform info, and the exact CLI parameters used
+- **Partial-failure safety** — reproducibility artifacts are finalized even if a phase fails partway through, so a broken run still leaves an auditable record of what completed
 
 ---
 
-## Testing
+## Honest Limitations (please read before you present this to your supervisor)
 
-Offline unit tests cover networking, AlphaFold DB logic, and reproducibility helpers:
+1. **Pathogen target panels are config-driven, not auto-discovered.** There is no reliable API that returns "the validated druggable targets for organism X" — every published docking study picks targets based on literature justification, not automated mining. `config/pathogen_targets.yaml` is intentionally the one human-curated part of this pipeline. To add a new pathogen, add a block and cite your source for each target.
+2. **Genome accession resolution from an organism name is automatic** (Phase 1, via NCBI Assembly search) and picks the best available reference/representative genome — but you should still sanity-check that the assembly it picked is the one you'd cite in your thesis.
+3. **`fpocket`'s default pocket ranking is used as-is.** For receptors with multiple plausible pockets, visually inspect the top 2–3 pockets (`results/fpocket/<receptor>/pockets/`) rather than trusting the ranking blindly for a thesis defense.
+4. **External bioinformatics tools (antiSMASH, ColabFold, AutoDock Vina, fpocket, PLIP, ADMET-AI) are not bundled or testable in a sandboxed code environment.** This repository's Python parsing logic was unit-tested against synthetic sample data (Vina logs, fpocket output), but a full end-to-end run should always be executed and checked against your own installed tool versions before trusting the results for a thesis chapter.
+5. **AutoDock Vina scoring, like all empirical docking scoring functions, is an approximate ranking of binding poses, not a substitute for experimental binding assays** (e.g., MIC, ITC, SPR). Treat results as candidate prioritization, not confirmed inhibition.
+
+---
+
+## Development & Testing
 
 ```bash
-pytest tests/ -v
-# tests/test_net.py          — retry, backoff, cache, fallback_chain
-# tests/test_alphafold.py    — AFDB hit / miss / error handling
-# tests/test_reproducibility.py
-# tests/test_vina_parsing.sh — Vina log score-parsing fix
+pip install -e ".[dev]"
+pytest tests/ -v          # offline unit tests: retries, caching, fallback
+                           # chains, AlphaFold DB integration, decision log
+ruff check src/ tests/
+black --check src/ tests/
 ```
 
-CI runs lint and these tests on every push/PR (`.github/workflows/ci.yml`).
-
-External tools (antiSMASH, Vina, fpocket, PLIP, ColabFold) are not executed in the sandboxed unit-test environment. Validate a full end-to-end run on your machine before relying on results for publication or a thesis chapter.
-
----
-
-## Known Limitations
-
-1. **Target panels are config-driven, not auto-discovered.** Justify each target in the literature and keep citations with the config.  
-2. **Genome resolution is automatic but should be sanity-checked** against the assembly you would cite.  
-3. **fpocket ranking is used as-is.** Always inspect the top 2–3 pockets for receptors with multiple plausible sites.  
-4. **Docking scores prioritise candidates; they do not prove inhibition.** Treat results as hypotheses for experimental follow-up (enzyme assays, MIC, structural studies).  
-5. **Full end-to-end runs depend on local tool versions.** Unit tests cover parsing and network logic; they do not replace a real run against your installed antiSMASH / Vina / fpocket stack.
-
----
-
-## Roadmap
-
-- Optional ensemble docking across multiple receptor conformations  
-- Expanded ligand-database cascade (e.g. additional natural-product resources)  
-- Propagation of AlphaFold pLDDT into pocket / docking confidence labels  
-- Continuous integration regression tests against reference docking outputs  
-- Streamlined single-organism quick-start profiles for teaching and workshops  
+See `CONTRIBUTING.md` for the ground rules: no fabricated science, no new hardcoded IDs, every external call goes through `pks_dock.net.HTTPClient`, and every automated choice gets logged. `CHANGELOG.md` tracks what changes release to release.
 
 ---
 
 ## Frequently Asked Questions
 
-**Do I need my own isolate genomes?**  
-No. PKS_DOCK is designed for reference-genome-based analysis when isolate WGS is unavailable. You can still supply a specific accession if you have one.
+**Does PKS_DOCK require the isolate's own genome to be sequenced?**
+No — that's the specific problem it's built to work around. It resolves a defensible reference genome automatically and documents that choice, rather than requiring whole-genome sequencing of the isolate itself.
 
-**Can I use experimental structures only?**  
-Yes. When PDBs are listed in the config, they are preferred. AlphaFold DB / ColabFold run only when no suitable experimental structure is available.
+**What happens if an antiSMASH cluster doesn't match a known compound?**
+It's left unannotated and reported as such. It is never silently treated as a named ligand or advanced through the docking stages under a compound identity it doesn't actually have.
 
-**Why fpocket instead of centring on a co-crystallised ligand?**  
-Co-crystallised ligands are often stripped during receptor preparation. Pocket detection from the receptor surface is the defensible default for apo or predicted structures.
+**Can I add my own experimental PDB structure instead of relying on AlphaFold/ColabFold?**
+Yes — list it under `candidate_pdb_ids` in `config/pathogen_targets.yaml`; the pipeline will select the best one by resolution automatically.
 
-**Is the ADMET step a full pharmacokinetic model?**  
-No. It applies practical filters (e.g. Lipinski-related rules) to prioritise candidates. It is not a substitute for experimental ADMET studies.
+**Why does PKS_DOCK use `fpocket` instead of a learned pocket-prediction model?**
+`fpocket` is deterministic, fast, and doesn't require GPU inference, which keeps the pipeline reproducible and runnable on modest hardware — the same reasoning behind `ResiDock`'s choice for the same problem.
 
-**How is this different from ResiDock?**  
-ResiDock starts from resistance genes / AI-predicted AMR targets and focuses on inhibitor prioritisation against those targets. PKS_DOCK starts from producer genomes, mines biosynthetic clusters, and docks the predicted natural products against pathogen targets. Complementary tools, different scientific questions.
+**Is a docking score a probability of biological activity?**
+No. It's an approximate ranking of predicted binding affinity from an empirical scoring function, not a statistical confidence interval or a measure of experimentally demonstrated inhibition.
+
+---
+
+## Roadmap
+
+- Propagate per-residue AlphaFold/ColabFold confidence (pLDDT) into the docking-box confidence assessment
+- Optional ensemble docking across multiple predicted conformations per receptor
+- Expanded ligand-database cascade (e.g., DrugBank, BindingDB) as additional fallback sources
+- Automated regression tests against reference docking results in CI
 
 ---
 
 ## Contributing
 
-Contributions, issues, and pull requests are welcome. For larger changes (new phases, new databases, new decision rules), open an issue first so the evidence-aware logic stays consistent.
+Contributions, issues, and pull requests are welcome. If you're planning a larger change (a new phase, a new fallback database, a new target-selection rule), please open an issue first to discuss the approach — this keeps the evidence-aware decision logic consistent across the codebase.
 
-Ground rules (see `CONTRIBUTING.md`):
-
-- No fabricated science or silent hardcoded IDs  
-- External HTTP calls go through `pks_dock.net.HTTPClient`  
-- Every automated choice is logged  
+When submitting a PR:
+1. Run the environment verification steps in [Installation](#installation) to confirm your setup matches `environment.yml`.
+2. Include the relevant phase's report JSON (or a diff of expected fields) if your change affects pipeline output.
+3. Document any new decision points in the same style as existing phases: explicit branch, explicit log entry, explicit provenance field.
 
 ---
 
 ## Acknowledgments
 
-PKS_DOCK orchestrates established open-source tools; credit for the underlying methods belongs to their authors and communities:
+This pipeline was developed under the supervision of **Prof. Aemere Ogunlaja**, Redeemer's University, Nigeria, whose supervision of the underlying MSc thesis work shaped the scientific questions this pipeline was built to answer.
 
-- [antiSMASH](https://antismash.secondarymetabolites.org/) — biosynthetic gene-cluster mining  
-- [AutoDock Vina](https://vina.scripps.edu/) — molecular docking  
-- [fpocket](https://github.com/Discngine/fpocket) — cavity detection  
-- [PLIP](https://github.com/pharmai/plip) — protein–ligand interaction profiling  
-- [AlphaFold](https://alphafold.ebi.ac.uk/) / [ColabFold](https://github.com/sokrypton/ColabFold) — structure prediction  
-- [Open Babel](https://openbabel.org/) — chemical file conversion  
-- [Biopython](https://biopython.org/) — sequence and structure utilities  
-- PubChem, ChEBI, UniProt, NCBI — data resources  
+PKS_DOCK also orchestrates several established open-source scientific tools; credit for the underlying science belongs to their respective authors and communities:
+
+- [antiSMASH](https://antismash.secondarymetabolites.org/) — biosynthetic gene cluster mining
+- [AutoDock Vina](https://vina.scripps.edu/) — molecular docking engine
+- [fpocket](https://github.com/Discngine/fpocket) — cavity and pocket detection
+- [PLIP](https://github.com/pharmai/plip) — protein–ligand interaction profiling
+- [ADMET-AI](https://github.com/swansonk14/admet_ai) — pharmacokinetic and drug-property prediction
+- [AlphaFold2](https://github.com/google-deepmind/alphafold) / [ColabFold](https://github.com/sokrypton/ColabFold) — AI-predicted protein structures
+- [RDKit](https://www.rdkit.org/), [Open Babel](https://openbabel.org/), [Meeko](https://github.com/forlilab/Meeko), [PDBFixer](https://github.com/openmm/pdbfixer), [ProDy](https://github.com/prody/ProDy) — structure preparation
+- [Biopython](https://biopython.org/) — structural biology utilities
 
 ---
 
@@ -442,30 +527,11 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ---
 
-## Citation
-
-If you use this pipeline, please cite the underlying tools it wraps, and this repository:
-
-```bibtex
-@software{pks_dock,
-  author = {Sylvester-Ali, Kizito Ibeojo},
-  title  = {PKS_DOCK: Genome-guided natural-product discovery with pocket-aware docking, interaction profiling, and ADMET prediction},
-  year   = {2026},
-  url    = {https://github.com/kizito-devbio/PKS_DOCK},
-  version = {0.2.0}
-}
-```
-
-A DOI via Zenodo is recommended once you freeze a release for a thesis or paper.
-
----
-
 ## Contact
 
-**Kizito Ibeojo Sylvester-Ali**  
-Email: [kizitosylvesterali@gmail.com](mailto:kizitosylvesterali@gmail.com)  
-GitHub: [github.com/kizito-devbio](https://github.com/kizito-devbio)  
-Repository: [github.com/kizito-devbio/PKS_DOCK](https://github.com/kizito-devbio/PKS_DOCK)  
-Docker: [hub.docker.com/r/kizitodevbio/pks-dock](https://hub.docker.com/r/kizitodevbio/pks-dock)
+**Kizito Ibeojo Sylvester-Ali**
+Email: [kizitosylvesterali@gmail.com](mailto:kizitosylvesterali@gmail.com)
+Website: [kizitlabs.com](https://kizitlabs.com)
+Repository: [github.com/kizito-devbio/PKS_DOCK](https://github.com/kizito-devbio/PKS_DOCK)
 
 Contributions, issues, and pull requests are welcome.
