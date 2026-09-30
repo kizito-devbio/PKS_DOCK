@@ -506,7 +506,6 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 **Kizito Ibeojo Sylvester-Ali**
 Email: [kizitosylvesterali@gmail.com](mailto:kizitosylvesterali@gmail.com)
-Website: [kizitlabs.com](https://kizitlabs.com)
 Repository: [github.com/kizito-devbio/PKS_DOCK](https://github.com/kizito-devbio/PKS_DOCK)
 
 Contributions, issues, and pull requests are welcome.
